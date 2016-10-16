@@ -31,16 +31,16 @@
 
 namespace command
 {
-    /** \brief A abstract base for all editor Actions than can be executed and made undone. */
+    /** \brief An abstract base for all editor Actions than can be executed and made undone. */
     class Action
     {
         friend class ActionManager;
 
         private:
-            /** \brief Invokes the action of the Action. */
+            /** \brief Invoke the action. */
             virtual void execute() = 0;
 
-            /** \brief Undo the action of the Action. */
+            /** \brief Undo the action. */
             virtual void undo() = 0;
     };
 
