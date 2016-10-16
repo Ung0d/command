@@ -4,6 +4,7 @@ A convenient, single-header implementation of the command-pattern with modern c+
 The command pattern provides an easy way to undo and redo actions - wrapped as objects. I use it for a game-level-editor of
 myself but others may find use-cases in their own projects.
 
+To use command, just include the header and make sure you have a c++11-compiler ready.
 
 Quick how-to:
 
