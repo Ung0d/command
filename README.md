@@ -49,3 +49,6 @@ And when your are like 'hey that wasnt that bad at all', just do:
 ```
 manager.redo();
 ```
+
+Undo and redo work just like in any other program you may know. You can undo the n last performed actions and redo them as you like.
+Note that a call of execute<..>(..) will clear the redo-memory (removes all undo()ne actions so far).
