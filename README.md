@@ -1,6 +1,12 @@
 # command
 A convenient, single-header implementation of the command-pattern with modern c++.
 
+The command pattern provides an easy way to undo and redo actions - wrapped as objects. I use it for a game-level-editor of
+myself but others may find use-cases in their own projects.
+
+
+Quick how-to:
+
 At first, you need a definite action that shall be performed. That action is an object that holds arbitrary parameters
 and derives from the command::Action interface.
 ```
