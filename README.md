@@ -4,31 +4,19 @@ A convenient, single-header implementation of the command-pattern with modern c+
 The command pattern provides an easy way to undo and redo actions - wrapped as objects. I use it for a game-level-editor of
 myself but others may find use-cases in their own projects.
 
-To use command, just include the header and make sure you have a c++11-compiler ready.
+To use command, just include the header and make sure you have a c++14-compiler ready.
 
 Quick how-to:
 
-At first, you need a definite action that shall be performed. That action is an object that holds arbitrary parameters
-and derives from the command::Action interface.
+All starts with an arbitrary free function - lets call it our action.
 ```
-class YourAction : public command::Action
-{
-private: 
-  //your members... 
-public:
- YourAction(/* arbitrary parameters */);
- 
- //override virtuals
-  virtual void execute() override
-    {
-        //do stuff
-    }
+void action(/* arbitrary arguments */) {...}
+```
 
-    virtual void undo() override
-    {
-        //revert the stuff
-    }
-}
+Corresponding to each of our actions, we need an undo function taking the same arguments as 
+the action. In that function we revert the stuff we did in action(..).
+```
+void undo(/* the same arbitrary arguments */) {...}
 ```
 
 Now create a manager object that 'remembers' all executed actions...
@@ -36,17 +24,19 @@ Now create a manager object that 'remembers' all executed actions...
 command::ActionManager manager;
 ```
 
-... and execute actions as you like.
+... and execute actions. We state our action-method, our undo-method and all parameters we need.
 ```
-manager.execute<YourAction>(/* your arbitrary parameters */);
+manager.execute(action, undo, /* arbitrary arguments */);
 ```
 
-When you feel you did something bad, just do:
+The above line does indeed the very same as just calling the action method with our arguments.
+However, if you feel like you did something bad, you can undo the last performed action like this:
 ```
 manager.undo();
 ```
 
-And when your are like 'hey that wasnt that bad at all', just do:
+The above code will call the undo method with the same parameters we called the action with.
+If you ever feel like "hey, the last stuff wasnt that bad at all", you can redo (undo of and undo) like this:
 ```
 manager.redo();
 ```
