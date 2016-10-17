@@ -1,27 +1,17 @@
 #include "Command.h"
 #include <iostream>
 
-//first define a concrete type of command
-class Addition : public command::Action
+//first define an action an the corresponding undo
+void add(int& sum, int add)
 {
-private:
-    int& mSum;
-    int mAdd;
+    sum += add;
+}
 
-public:
-    Addition(int& sum, int add) : mSum(sum), mAdd(add) {}
+void undo(int& sum, int add)
+{
+    sum -= add;
+}
 
-private:
-    virtual void execute() override
-    {
-        mSum += mAdd;
-    }
-
-    virtual void undo() override
-    {
-        mSum -= mAdd;
-    }
-};
 
 int main()
 {
@@ -31,9 +21,9 @@ int main()
     int sum = 0;
 
     //execute some actions
-    manager.execute<Addition>(sum, 4);
-    manager.execute<Addition>(sum, 11);
-    manager.execute<Addition>(sum, 7);
+    manager.execute(add, undo, sum, 4);
+    manager.execute(add, undo, sum, 11);
+    manager.execute(add, undo, sum, 7);
 
     std::cout << sum << std::endl;
     manager.undo();

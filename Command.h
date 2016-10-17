@@ -28,56 +28,76 @@
 
 #include <deque>
 #include <memory>
+#include <tuple>
 
 namespace command
 {
-    /** \brief An abstract base for all editor Actions than can be executed and made undone. */
-    class Action
-    {
-        friend class ActionManager;
-
-        private:
-            /** \brief Invoke the action. */
-            virtual void execute() = 0;
-
-            /** \brief Undo the action. */
-            virtual void undo() = 0;
-    };
-
-
     /** \brief A manager-object for Actions that works as a stack holding a predefined number of
-    * Actions. The manager offers the possibility to undo the upmost operation on the stack.
-    * Access semantics: Client code cant call Action::execute() Action::undo(), only the manager can. */
+    * Actions. The manager offers the possibility to undo the upmost operation on the stack. */
     class ActionManager
     {
-    private:
-        unsigned mStackSize; ///<indicates how deep the "memory" of the Action-manager is
-        std::deque< std::unique_ptr<Action> > mActionStack;
-        std::deque< std::unique_ptr<Action> >::iterator mUndoMaker;
-
     public:
         ActionManager() : mStackSize(100), mUndoMaker(mActionStack.end()) {}
 
-        /** \brief Executes a new Action of type CT. CT must be derived from the Action base class
-        * and its constructor can take an arbitrary amount of parameters that are needed for the execution.
-        * The Action is then constructed and executed and stored on the stack. While it is on the stack,
-        * it can be undo()ne to revert its action. */
-        template<typename CT, typename ... PARAM>
-        inline void execute( PARAM&& ... param );
+        /** \brief Executes a new action function with arbitrary parameters and stores it on top of
+        * the internal stack along with a corresponding redo function, taking exactly the same parameters. */
+        template<typename FUNC, typename ... PARAM>
+        inline void execute( FUNC action, FUNC undo, PARAM&& ... param );
 
         /** \brief Undo the last performed Action. (the Action that is on top of the stack) */
         inline void undo();
 
-        /** \brief Redo a Action that was undo()ne before. */
+        /** \brief Redo an action that was undo()ne before. */
         inline void redo();
+
+    private:
+        /** \brief A base for all editor Actions than can be executed and made undone. */
+        class BaseAction
+        {
+        friend class ActionManager;
+            private:
+                /** \brief Invokes the action. */
+                virtual void execute() = 0;
+
+                /** \brief Undo the action. */
+                virtual void undo() = 0;
+        };
+
+        template<typename ... PARAM>
+        class Action : public BaseAction
+        {
+        private:
+            std::tuple<PARAM...> mParam;
+            std::function<void(PARAM ...)> mActionCallback;
+            std::function<void(PARAM ...)> mUndoCallback;
+
+            template<std::size_t ...I>
+            void callAction(std::index_sequence<I...>);
+
+            template<std::size_t ...I>
+            void callUndo(std::index_sequence<I...>);
+
+            virtual void execute() override;
+            virtual void undo() override;
+
+        public:
+            Action(std::function<void(PARAM ...)> cAction, std::function<void(PARAM ...)> cUndo, PARAM&& ... param);
+        };
+
+
+        unsigned mStackSize; ///<indicates how deep the "memory" of the Action-manager is
+        std::deque< std::unique_ptr<BaseAction> > mActionStack;
+        std::deque< std::unique_ptr<BaseAction> >::iterator mUndoMaker;
     };
 
 
-    template<typename CT, typename ... PARAM>
-    void ActionManager::execute( PARAM&& ... param )
+    template<typename FUNC, typename ... PARAM>
+    void ActionManager::execute( FUNC action, FUNC undo, PARAM&& ... param )
     {
         mActionStack.erase(mUndoMaker, mActionStack.end());
-        mActionStack.emplace_back(std::unique_ptr<Action>( new CT(std::forward<PARAM>(param)...) )); //constructs a new Action object on top of the stack
+        mActionStack.emplace_back(std::unique_ptr<BaseAction>( new Action<PARAM...>( std::function<void(PARAM ...)>(action),
+                                                                                     std::function<void(PARAM ...)>(undo),
+                                                                                     std::forward<PARAM>(param)...) ));
         mUndoMaker = mActionStack.end();
         mActionStack.back()->execute();
         if (mActionStack.size() > mStackSize)
@@ -100,6 +120,43 @@ namespace command
             mUndoMaker->get()->execute();
             mUndoMaker = std::next(mUndoMaker);
         }
+    }
+
+
+    template<typename ... PARAM>
+    ActionManager::Action<PARAM...>::Action(std::function<void(PARAM ...)> cAction,
+                                            std::function<void(PARAM ...)> cUndo,
+                                            PARAM&& ... param) :
+                mParam( std::forward_as_tuple(std::forward<PARAM>(param)...) )
+    {
+        mActionCallback = cAction;
+        mUndoCallback = cUndo;
+    }
+
+    template<typename ... PARAM>
+    template<std::size_t ...I>
+    void ActionManager::Action<PARAM...>::callAction(std::index_sequence<I...>)
+    {
+        mActionCallback(std::get<I>(mParam)...);
+    }
+
+    template<typename ... PARAM>
+    template<std::size_t ...I>
+    void ActionManager::Action<PARAM...>::callUndo(std::index_sequence<I...>)
+    {
+        mUndoCallback(std::get<I>(mParam)...);
+    }
+
+    template<typename ... PARAM>
+    void ActionManager::Action<PARAM...>::execute()
+    {
+        callAction( std::index_sequence_for<PARAM...>{} );
+    }
+
+    template<typename ... PARAM>
+    void ActionManager::Action<PARAM...>::undo()
+    {
+        callUndo( std::index_sequence_for<PARAM...>{} );
     }
 }
 
